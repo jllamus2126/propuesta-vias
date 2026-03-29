@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Propuestas — Pliegos tipo vías</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;background:#f4f5f7;color:#1a1a2e}
+.header{background:#fff;border-bottom:1px solid #e0e0e0;padding:0 2rem}
+.header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:1rem;padding:.75rem 0}
+.logo{font-size:16px;font-weight:600;color:#185fa5}
+.logo span{color:#1a1a2e;font-weight:400}
+.nav{display:flex;gap:0;margin-left:2rem}
+.ntab{padding:8px 18px;border:none;background:none;cursor:pointer;font-size:13px;color:#666;border-bottom:2px solid transparent;font-family:inherit;transition:all .15s}
+.ntab:hover{color:#1a1a2e}
+.ntab.act{color:#185fa5;border-bottom-color:#185fa5;font-weight:500}
+.main{max-width:1100px;margin:1.5rem auto;padding:0 1rem}
+.card{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:1.25rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card-title{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;color:#666;font-weight:500}
+.field input,.field select,.field textarea{font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid #d0d0d0;border-radius:7px;background:#fff;color:#1a1a2e;outline:none;transition:border .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#185fa5;box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+.field textarea{resize:vertical;min-height:65px}
+.btn{padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;background:#fff;border:1px solid #ccc;border-radius:8px;color:#1a1a2e;font-family:inherit;transition:all .15s}
+.btn:hover{background:#f5f7fa;border-color:#aaa}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-primary{background:#185fa5;color:#fff;border-color:#185fa5}
+.btn-primary:hover{background:#0f4a87;border-color:#0f4a87}
+.btn-success{background:#3b6d11;color:#fff;border-color:#3b6d11}
+.btn-success:hover{background:#2a5009}
+.btn-danger{background:#fff;color:#a32d2d;border-color:#e24b4a}
+.btn-danger:hover{background:#fcebeb}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.emp-card{border:1px solid #e0e0e0;border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;background:#fff;transition:all .15s}
+.emp-card:hover{border-color:#185fa5;box-shadow:0 2px 8px rgba(24,95,165,.1)}
+.emp-card.sel{border-color:#185fa5;background:#f0f6ff}
+.emp-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.emp-sub{font-size:12px;color:#888}
+.badge{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:500;margin-right:4px}
+.badge-blue{background:#e6f1fb;color:#185fa5}
+.badge-green{background:#eaf3de;color:#3b6d11}
+.badge-warn{background:#faeeda;color:#854f0b}
+.badge-red{background:#fcebeb;color:#a32d2d}
+.alerta-rojo{background:#fcebeb;border:1px solid #f09595;border-radius:7px;padding:8px 12px;font-size:12px;color:#a32d2d;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.alerta-amarillo{background:#faeeda;border:1px solid #ef9f27;border-radius:7px;padding:8px 12px;font-size:12px;color:#854f0b;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:5px;background:#f0f0f0;color:#666;margin-right:3px;margin-top:2px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,.15);border-top-color:#185fa5;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:3rem;color:#999;font-size:13px;line-height:1.7}
+.sep{border:none;border-top:1px solid #f0f0f0;margin:1rem 0}
+.indicador{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px}
+.ind-ok{color:#3b6d11;font-weight:500}
+.ind-fail{color:#a32d2d;font-weight:500}
+.ind-na{color:#888}
+.fmt-chip{display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;background:#e6f1fb;color:#185fa5;margin:3px}
+.fmt-chip.hab{background:#eaf3de;color:#3b6d11}
+.step{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f5f5f5}
+.step:last-child{border:none}
+.step-num{width:28px;height:28px;border-radius:50%;background:#185fa5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.step-text{font-size:13px}
+.upload-box{border:2px dashed #d0d0d0;border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer;transition:all .15s;position:relative}
+.upload-box:hover{border-color:#185fa5;background:#f7fbff}
+.upload-box input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-box p{font-size:13px;color:#888;margin-top:6px}
+.pct-input{width:65px}
+.pct-ok{background:#eaf3de;color:#3b6d11;padding:3px 8px;border-radius:5px;font-size:12px;font-weight:500}
+.pct-err{background:#fcebeb;color:#a32d2d;padding:3px 8px;border-radius:5px;font-size:12px;font-weight:500}
+.tabs-inner{display:flex;border-bottom:1px solid #e0e0e0;margin-bottom:1rem}
+.itab{padding:6px 14px;border:none;background:none;cursor:pointer;font-size:12px;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit}
+.itab.act{color:#185fa5;border-bottom-color:#185fa5;font-weight:500}
+.section-title{font-size:16px;font-weight:600;margin-bottom:4px}
+.section-sub{font-size:13px;color:#888;margin-bottom:1.25rem}
+.chk-label{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:4px 0}
+.exp-item{border:1px solid #e0e0e0;border-radius:7px;padding:10px;margin-bottom:7px;display:flex;align-items:flex-start;gap:10px}
+.exp-check{margin-top:2px;flex-shrink:0;width:16px;height:16px;cursor:pointer}
+.prog-bar{background:#e0e0e0;border-radius:10px;height:6px;margin-top:4px}
+.prog-fill{background:#185fa5;height:6px;border-radius:10px;transition:width .4s}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">Propuestas <span>— Pliegos tipo vías</span></div>
+    <div style="font-size:11px;color:#888;background:#f0f6ff;padding:3px 10px;border-radius:20px;border:1px solid #b5d4f4">Res. 465/2024 · Versión 4</div>
+    <div class="nav">
+      <button class="ntab act" onclick="goTab('empresas',this)">Base de datos</button>
+      <button class="ntab" onclick="goTab('proceso',this)">Nuevo proceso</button>
+      <button class="ntab" onclick="goTab('verificar',this)">Verificar y generar</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div id="tab-empresas"></div>
+  <div id="tab-proceso" style="display:none"></div>
+  <div id="tab-verificar" style="display:none"></div>
+</div>
+
+<script>
+// ─── ESTADO ─────────────────────────────────────────────────────────────────
+let state = {
+  empresas: [],
+  pliego: null,
+  propuesta: { tipo:'individual', participantes:[], nombre_plural:'', obj_plural:'', dur_plural:'', rep_plural:'', cc_rep_plural:'', rep_suplente:'', cc_suplente:'' },
+  verificacion: null,
+  editingId: null
+};
+
+// ─── NAVEGACIÓN ──────────────────────────────────────────────────────────────
+function goTab(name, btn){
+  document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('act'));
+  if(btn) btn.classList.add('act');
+  ['empresas','proceso','verificar'].forEach(t=>{ document.getElementById('tab-'+t).style.display = t===name?'block':'none'; });
+  if(name==='empresas') renderEmpresas();
+  if(name==='proceso') renderProceso();
+  if(name==='verificar') renderVerificar();
+}
+
+// ─── API ─────────────────────────────────────────────────────────────────────
+async function api(url, opts={}){
+  const r = await fetch(url, {headers:{'Content-Type':'application/json'}, ...opts});
+  return r.json();
+}
+
+// ─── CARGAR EMPRESAS ─────────────────────────────────────────────────────────
+async function cargarEmpresas(){
+  state.empresas = await api('/api/empresas');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAB 1: EMPRESAS
+// ══════════════════════════════════════════════════════════════════════════════
+async function renderEmpresas(){
+  await cargarEmpresas();
+  const el = document.getElementById('tab-empresas');
+  el.innerHTML = `
+    <div class="row" style="margin-bottom:1rem">
+      <div><div class="section-title">Base de datos de empresas</div><div class="section-sub">Registra y gestiona las empresas con las que presentas propuestas</div></div>
+      <div style="flex:1"></div>
+      <button class="btn btn-primary" onclick="mostrarFormEmpresa(null)">+ Nueva empresa</button>
+    </div>
+    <div id="lista-empresas"></div>`;
+  renderListaEmpresas();
+}
+
+function renderListaEmpresas(){
+  const el = document.getElementById('lista-empresas');
+  if(!el) return;
+  if(state.empresas.length===0){
+    el.innerHTML = `<div class="empty">No hay empresas registradas.<br>Agrega la primera para comenzar.</div>`;
+    return;
+  }
+  el.innerHTML = state.empresas.map(e=>`
+    <div class="emp-card">
+      <div style="flex:1">
+        <div class="emp-name">${e.razon_social||'Sin nombre'}
+          ${e.alertas?.map(a=>`<span class="badge badge-${a.nivel==='rojo'?'red':'warn'}" title="${a.msg}">⚠ ${a.tipo}</span>`).join('')||''}
+        </div>
+        <div class="emp-sub">NIT: ${e.nit||'—'} · ${e.tipo||'—'} · ${e.ciudad||'—'}</div>
+        <div style="margin-top:4px">
+          ${e.experiencia?.length?`<span class="tag">${e.experiencia.length} contratos</span>`:''}
+          ${e.tiene_discapacidad?'<span class="tag" style="background:#e6f1fb;color:#185fa5">Discapacidad</span>':''}
+          ${e.tiene_mujeres?'<span class="tag" style="background:#fbeaf0;color:#993556">Mujeres</span>':''}
+          ${e.es_mipyme?'<span class="tag" style="background:#eaf3de;color:#3b6d11">Mipyme</span>':''}
+        </div>
+        ${e.alertas?.length?`<div style="margin-top:6px">${e.alertas.map(a=>`<div class="alerta-${a.nivel}">⚠ ${e.razon_social}: ${a.msg} (${a.tipo})</div>`).join('')}</div>`:''}
+      </div>
+      <div class="row">
+        <button class="btn btn-sm" onclick="mostrarFormEmpresa(${e.id})">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="eliminarEmpresa(${e.id})">Eliminar</button>
+      </div>
+    </div>`).join('');
+}
+
+function mostrarFormEmpresa(id){
+  const emp = id ? state.empresas.find(e=>e.id===id) : {};
+  const el = document.getElementById('tab-empresas');
+  el.innerHTML = `
+    <div class="row" style="margin-bottom:1rem">
+      <div class="section-title">${id?'Editar empresa':'Nueva empresa'}</div>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="renderEmpresas()">← Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEmpresa(${id||'null'})">Guardar empresa</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Datos básicos</div>
+      <div class="g2">
+        <div class="field full"><label>Razón social</label><input id="f-razon" value="${emp.razon_social||''}"></div>
+        <div class="field"><label>NIT</label><input id="f-nit" value="${emp.nit||''}"></div>
+        <div class="field"><label>Tipo de empresa</label>
+          <select id="f-tipo">
+            ${['S.A.S.','S.A.','Ltda.','E.U.','Persona Natural','Cooperativa'].map(t=>`<option${emp.tipo===t?' selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Dirección</label><input id="f-dir" value="${emp.direccion||''}"></div>
+        <div class="field"><label>Ciudad</label><input id="f-ciudad" value="${emp.ciudad||''}"></div>
+        <div class="field"><label>Teléfono</label><input id="f-tel" value="${emp.telefono||''}"></div>
+        <div class="field"><label>Email</label><input id="f-email" value="${emp.email||''}"></div>
+        <div class="field"><label>Representante legal</label><input id="f-rep" value="${emp.rep_legal||''}"></div>
+        <div class="field"><label>CC representante legal</label><input id="f-cc" value="${emp.cc_rep_legal||''}"></div>
+        <div class="field"><label>Cámara de comercio (ciudad)</label><input id="f-camara" value="${emp.camara_comercio||''}"></div>
+        <div class="field"><label>Fecha vencimiento cámara</label><input id="f-venc-camara" type="date" value="${emp.fecha_vencimiento_camara||''}"></div>
+        <div class="field"><label>Fecha constitución</label><input id="f-constitucion" type="date" value="${emp.fecha_constitucion||''}"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Contador y Revisor Fiscal (para Formato 6)</div>
+      <div class="g2">
+        <div class="field"><label>Nombre contador</label><input id="f-cont-nom" value="${emp.contador_nombre||''}"></div>
+        <div class="field"><label>CC contador</label><input id="f-cont-cc" value="${emp.contador_cc||''}"></div>
+        <div class="field"><label>T.P. contador</label><input id="f-cont-tp" value="${emp.contador_tp||''}"></div>
+        <div class="field"><label>Cámara inscripción (contador)</label><input id="f-cont-cam" value="${emp.contador_camara||''}"></div>
+        <div class="field"><label>Nombre revisor fiscal (si aplica)</label><input id="f-rev-nom" value="${emp.revisor_nombre||''}"></div>
+        <div class="field"><label>CC revisor fiscal</label><input id="f-rev-cc" value="${emp.revisor_cc||''}"></div>
+        <div class="field"><label>T.P. revisor fiscal</label><input id="f-rev-tp" value="${emp.revisor_tp||''}"></div>
+        <div class="field"><label>Cámara inscripción (revisor)</label><input id="f-rev-cam" value="${emp.revisor_camara||''}"></div>
+        <label class="chk-label full"><input type="checkbox" id="f-exon" ${emp.exonerada_parafiscales?'checked':''}> Empresa exonerada de aportes parafiscales (art. 114-1 E.T.)</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Capacidad financiera (del RUP vigente)</div>
+      <div class="g2">
+        <div class="field"><label>Capital de trabajo (COP)</label><input id="f-cap" value="${emp.capital_trabajo||''}" placeholder="Ej: 500000000"></div>
+        <div class="field"><label>Patrimonio neto (COP)</label><input id="f-pat" value="${emp.patrimonio||''}" placeholder="Ej: 1200000000"></div>
+        <div class="field"><label>Índice de liquidez</label><input id="f-liq" value="${emp.liquidez||''}" placeholder="Ej: 1.8"></div>
+        <div class="field"><label>Índice de endeudamiento</label><input id="f-end" value="${emp.endeudamiento||''}" placeholder="Ej: 0.6"></div>
+        <div class="field"><label>Rentabilidad del patrimonio</label><input id="f-rent" value="${emp.rentabilidad||''}" placeholder="Ej: 0.05"></div>
+      </div>
+      <div style="margin-top:.75rem">
+        <div style="font-size:12px;color:#888;margin-bottom:.5rem">O sube el RUP en PDF para que la IA extraiga los datos automáticamente:</div>
+        <div class="upload-box" id="rup-box">
+          <input type="file" accept=".pdf" onchange="subirDocumento(${id||'temp'},'rup',this)">
+          <div style="font-size:22px">📄</div>
+          <p>Haz clic o arrastra el PDF del RUP aquí</p>
+        </div>
+        <div id="rup-status"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Documentos para subir (IA extrae datos automáticamente)</div>
+      <div class="g2">
+        ${[
+          ['camara','Cámara de comercio (PDF)'],
+          ['cedula','Cédula representante legal (PDF)'],
+          ['tarjeta_profesional','Tarjeta profesional contador/revisor (PDF)'],
+        ].map(([tipo,label])=>`
+        <div>
+          <div style="font-size:12px;color:#666;font-weight:500;margin-bottom:5px">${label}</div>
+          <div class="upload-box" style="padding:1rem">
+            <input type="file" accept=".pdf" onchange="subirDocumento(${id||'temp'},'${tipo}',this)">
+            <p>Subir PDF</p>
+          </div>
+          <div id="doc-${tipo}-status" style="font-size:12px;color:#888;margin-top:4px"></div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Puntajes especiales</div>
+      <div class="g2">
+        <div>
+          <label class="chk-label"><input type="checkbox" id="f-disc" ${emp.tiene_discapacidad?'checked':''}> Tiene personas con discapacidad certificadas (F8)</label>
+          <div id="disc-upload" style="${emp.tiene_discapacidad?'':'display:none'};margin-top:8px">
+            <div class="upload-box" style="padding:.75rem">
+              <input type="file" accept=".pdf" onchange="subirDocumento(${id||'temp'},'cert_discapacidad',this)">
+              <p>Certificado Ministerio de Trabajo (PDF)</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="chk-label"><input type="checkbox" id="f-muj" ${emp.tiene_mujeres?'checked':''}> Es empresa de mujeres (F12)</label>
+          <div id="muj-upload" style="${emp.tiene_mujeres?'':'display:none'};margin-top:8px">
+            <div class="upload-box" style="padding:.75rem">
+              <input type="file" accept=".pdf" onchange="subirDocumento(${id||'temp'},'acta_accionaria',this)">
+              <p>Acta de composición accionaria (PDF)</p>
+            </div>
+          </div>
+        </div>
+        <label class="chk-label"><input type="checkbox" id="f-mipyme" ${emp.es_mipyme?'checked':''}> Es Mipyme (F13)</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Experiencia acreditada</div>
+      <div style="font-size:12px;color:#888;margin-bottom:.75rem">Se acumula por empresa. Al armar una propuesta seleccionas cuáles incluir.</div>
+      <div id="exp-lista">
+        ${(emp.experiencia||[]).map(x=>`
+        <div class="exp-item">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">${x.entidad}</div>
+            <div style="font-size:12px;color:#888">${x.objeto?.slice(0,80)||''}${x.objeto?.length>80?'...':''}</div>
+            <div style="font-size:12px;color:#666;margin-top:2px">${x.valor} · ${x.anio} · ${x.plazo} ${x.unspsc?'· UNSPSC: '+x.unspsc:''}</div>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="eliminarExp(${x.id},${id})">✕</button>
+        </div>`).join('')||'<div style="font-size:13px;color:#999;margin-bottom:.75rem">Sin contratos registrados aún.</div>'}
+      </div>
+      <div class="card" style="background:#f9f9f9;border-style:dashed">
+        <div class="card-title">Agregar contrato</div>
+        <div class="g2">
+          <div class="field full"><label>Entidad contratante</label><input id="exp-entidad" placeholder="Ej: INVIAS, Gobernación de Cundinamarca..."></div>
+          <div class="field full"><label>Objeto del contrato</label><textarea id="exp-objeto" style="min-height:50px"></textarea></div>
+          <div class="field"><label>Valor del contrato (COP)</label><input id="exp-valor" placeholder="Ej: 800000000"></div>
+          <div class="field"><label>Año de terminación</label><input id="exp-anio" placeholder="2023"></div>
+          <div class="field"><label>Plazo ejecutado</label><input id="exp-plazo" placeholder="8 meses"></div>
+          <div class="field"><label>Código UNSPSC</label><input id="exp-unspsc" placeholder="Ej: 72151501"></div>
+          <div class="field"><label>No. Acta liquidación (opcional)</label><input id="exp-acta"></div>
+        </div>
+        <div style="margin-top:.75rem">
+          <button class="btn btn-sm btn-success" onclick="agregarExp(${id||'null'})">+ Agregar contrato</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="justify-content:flex-end;margin-top:.5rem">
+      <button class="btn" onclick="renderEmpresas()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEmpresa(${id||'null'})">Guardar empresa</button>
+    </div>`;
+
+  // Toggle uploads
+  document.getElementById('f-disc')?.addEventListener('change', function(){
+    document.getElementById('disc-upload').style.display = this.checked?'block':'none';
+  });
+  document.getElementById('f-muj')?.addEventListener('change', function(){
+    document.getElementById('muj-upload').style.display = this.checked?'block':'none';
+  });
+}
+
+async function guardarEmpresa(id){
+  const data = {
+    razon_social: document.getElementById('f-razon').value,
+    nit: document.getElementById('f-nit').value,
+    tipo: document.getElementById('f-tipo').value,
+    direccion: document.getElementById('f-dir').value,
+    ciudad: document.getElementById('f-ciudad').value,
+    telefono: document.getElementById('f-tel').value,
+    email: document.getElementById('f-email').value,
+    rep_legal: document.getElementById('f-rep').value,
+    cc_rep_legal: document.getElementById('f-cc').value,
+    camara_comercio: document.getElementById('f-camara').value,
+    fecha_vencimiento_camara: document.getElementById('f-venc-camara').value,
+    fecha_constitucion: document.getElementById('f-constitucion').value,
+    contador_nombre: document.getElementById('f-cont-nom').value,
+    contador_cc: document.getElementById('f-cont-cc').value,
+    contador_tp: document.getElementById('f-cont-tp').value,
+    contador_camara: document.getElementById('f-cont-cam').value,
+    revisor_nombre: document.getElementById('f-rev-nom').value,
+    revisor_cc: document.getElementById('f-rev-cc').value,
+    revisor_tp: document.getElementById('f-rev-tp').value,
+    revisor_camara: document.getElementById('f-rev-cam').value,
+    capital_trabajo: document.getElementById('f-cap').value,
+    patrimonio: document.getElementById('f-pat').value,
+    liquidez: document.getElementById('f-liq').value,
+    endeudamiento: document.getElementById('f-end').value,
+    rentabilidad: document.getElementById('f-rent').value,
+    tiene_discapacidad: document.getElementById('f-disc').checked?1:0,
+    tiene_mujeres: document.getElementById('f-muj').checked?1:0,
+    es_mipyme: document.getElementById('f-mipyme').checked?1:0,
+    exonerada_parafiscales: document.getElementById('f-exon').checked?1:0,
+  };
+  if(!data.razon_social){ alert('La razón social es obligatoria'); return; }
+  if(id){
+    await api(`/api/empresas/${id}`, {method:'PUT', body:JSON.stringify(data)});
+  } else {
+    await api('/api/empresas', {method:'POST', body:JSON.stringify(data)});
+  }
+  await renderEmpresas();
+}
+
+async function eliminarEmpresa(id){
+  if(!confirm('¿Eliminar esta empresa y todos sus datos?')) return;
+  await api(`/api/empresas/${id}`, {method:'DELETE'});
+  await renderEmpresas();
+}
+
+async function agregarExp(empresaId){
+  const data = {
+    entidad: document.getElementById('exp-entidad').value,
+    objeto: document.getElementById('exp-objeto').value,
+    valor: document.getElementById('exp-valor').value,
+    anio: document.getElementById('exp-anio').value,
+    plazo: document.getElementById('exp-plazo').value,
+    unspsc: document.getElementById('exp-unspsc').value,
+    acta: document.getElementById('exp-acta').value,
+  };
+  if(!data.entidad||!data.objeto){ alert('Completa entidad y objeto'); return; }
+  if(empresaId){
+    await api(`/api/empresas/${empresaId}/experiencia`, {method:'POST', body:JSON.stringify(data)});
+    await cargarEmpresas();
+    mostrarFormEmpresa(empresaId);
+  }
+}
+
+async function eliminarExp(expId, empresaId){
+  await api(`/api/experiencia/${expId}`, {method:'DELETE'});
+  await cargarEmpresas();
+  mostrarFormEmpresa(empresaId);
+}
+
+async function subirDocumento(empresaId, tipo, input){
+  if(!input.files[0]) return;
+  if(!empresaId || empresaId==='temp'){
+    alert('Primero guarda la empresa, luego sube los documentos');
+    input.value='';
+    return;
+  }
+  const statusEl = document.getElementById(`doc-${tipo}-status`) || document.getElementById(`${tipo==='rup'?'rup':'doc-'+tipo}-status`);
+  if(statusEl) statusEl.innerHTML = '<span class="spin"></span>Subiendo y extrayendo datos con IA...';
+
+  const form = new FormData();
+  form.append('archivo', input.files[0]);
+  form.append('tipo', tipo);
+
+  try {
+    const r = await fetch(`/api/empresas/${empresaId}/subir-documento`, {method:'POST', body:form});
+    const res = await r.json();
+    if(res.ok){
+      if(statusEl) statusEl.innerHTML = `<span style="color:#3b6d11;font-weight:500">✓ Documento subido.</span> Datos extraídos: ${Object.entries(res.datos_extraidos||{}).filter(([k,v])=>v).map(([k,v])=>`${k}: ${v}`).slice(0,3).join(' · ')}`;
+      // Rellenar campos automáticamente si es RUP o cámara
+      if(tipo==='rup' && res.datos_extraidos){
+        const d = res.datos_extraidos;
+        if(d.liquidez) document.getElementById('f-liq').value = d.liquidez;
+        if(d.endeudamiento) document.getElementById('f-end').value = d.endeudamiento;
+        if(d.rentabilidad) document.getElementById('f-rent').value = d.rentabilidad;
+        if(d.capital_trabajo) document.getElementById('f-cap').value = d.capital_trabajo;
+        if(d.patrimonio) document.getElementById('f-pat').value = d.patrimonio;
+      }
+      if(tipo==='camara' && res.datos_extraidos){
+        const d = res.datos_extraidos;
+        if(d.razon_social) document.getElementById('f-razon').value = d.razon_social;
+        if(d.nit) document.getElementById('f-nit').value = d.nit;
+        if(d.rep_legal) document.getElementById('f-rep').value = d.rep_legal;
+        if(d.fecha_vencimiento) document.getElementById('f-venc-camara').value = d.fecha_vencimiento;
+      }
+    }
+  } catch(e){
+    if(statusEl) statusEl.innerHTML = '<span style="color:#a32d2d">Error subiendo el documento</span>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAB 2: PROCESO
+// ══════════════════════════════════════════════════════════════════════════════
+function renderProceso(){
+  const el = document.getElementById('tab-proceso');
+  const p = state.propuesta;
+  el.innerHTML = `
+    <div class="section-title">Nuevo proceso</div>
+    <div class="section-sub">Sube el pliego y configura quién presenta la propuesta</div>
+
+    <div class="card">
+      <div class="card-title">Pliego de condiciones</div>
+      <div class="upload-box" id="pliego-box">
+        <input type="file" accept=".pdf" onchange="analizarPliego(this)">
+        <div style="font-size:28px">📋</div>
+        <div style="font-size:14px;font-weight:500;margin-top:8px">Sube el documento base del pliego (PDF)</div>
+        <p>La IA extrae automáticamente todos los requisitos y determina qué formatos aplican</p>
+      </div>
+      <div id="pliego-status" style="margin-top:.75rem"></div>
+      <div id="pliego-resultado"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Tipo de proponente</div>
+      <div class="row" style="margin-bottom:1rem">
+        ${[['individual','Empresa individual'],['consorcio','Consorcio'],['ut','Unión Temporal']].map(([k,l])=>`
+        <button class="btn ${p.tipo===k?'btn-primary':''}" onclick="setTipo('${k}')">${l}</button>`).join('')}
+      </div>
+      <div id="plural-datos" style="${p.tipo==='individual'?'display:none':''}">
+        <div class="g2">
+          <div class="field full"><label>Nombre del ${p.tipo==='consorcio'?'consorcio':'UT'}</label><input id="pp-nombre" value="${p.nombre_plural||''}" oninput="p.nombre_plural=this.value"></div>
+          <div class="field full"><label>Objeto</label><input id="pp-obj" value="${p.obj_plural||''}" oninput="p.obj_plural=this.value"></div>
+          <div class="field"><label>Duración</label><input id="pp-dur" value="${p.dur_plural||''}" oninput="p.dur_plural=this.value"></div>
+          <div class="field"><label>Representante</label><input id="pp-rep" value="${p.rep_plural||''}" oninput="p.rep_plural=this.value"></div>
+          <div class="field"><label>CC representante</label><input id="pp-cc" value="${p.cc_rep_plural||''}" oninput="p.cc_rep_plural=this.value"></div>
+          <div class="field"><label>Representante suplente</label><input id="pp-sup" value="${p.rep_suplente||''}" oninput="p.rep_suplente=this.value"></div>
+          <div class="field"><label>CC suplente</label><input id="pp-ccs" value="${p.cc_suplente||''}" oninput="p.cc_suplente=this.value"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Empresas participantes ${p.tipo!=='individual'?'(asigna % de participación)':''}</div>
+      ${state.empresas.length===0?'<div class="empty">No hay empresas. Ve a "Base de datos" para registrarlas.</div>':
+      state.empresas.map(e=>{
+        const sel = p.participantes.find(x=>x.id===e.id);
+        return `
+        <div class="emp-card ${sel?'sel':''}" onclick="toggleEmp(${e.id})">
+          <div style="flex:1">
+            <div class="emp-name">${e.razon_social}</div>
+            <div class="emp-sub">NIT: ${e.nit} · ${e.ciudad||'—'}</div>
+          </div>
+          <div class="row" onclick="event.stopPropagation()">
+            ${p.tipo!=='individual' && sel ? `
+            <input class="pct-input field input" type="number" min="0" max="100" value="${sel.pct||0}"
+              onchange="setPct(${e.id},this.value)" style="width:65px;padding:5px 8px;border:1px solid #d0d0d0;border-radius:6px;font-size:13px">
+            <span style="font-size:12px;color:#888">%</span>` : ''}
+            <input type="${p.tipo==='individual'?'radio':'checkbox'}" ${sel?'checked':''} onchange="toggleEmp(${e.id})">
+          </div>
+        </div>`;
+      }).join('')}
+      ${p.tipo!=='individual' && p.participantes.length>0 ? `
+      <div class="row" style="margin-top:8px">
+        <span style="font-size:12px;color:#666">Total:</span>
+        <span class="${Math.round(p.participantes.reduce((s,x)=>s+(+x.pct||0),0))===100?'pct-ok':'pct-err'}">
+          ${p.participantes.reduce((s,x)=>s+(+x.pct||0),0).toFixed(1)}%
+        </span>
+        ${Math.round(p.participantes.reduce((s,x)=>s+(+x.pct||0),0))!==100?'<span style="font-size:12px;color:#a32d2d">Debe sumar 100%</span>':''}
+      </div>` : ''}
+    </div>
+
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn btn-primary" onclick="irAVerificar()">Continuar →</button>
+    </div>`;
+}
+
+function setTipo(tipo){
+  state.propuesta.tipo = tipo;
+  state.propuesta.participantes = [];
+  renderProceso();
+}
+
+function toggleEmp(id){
+  const p = state.propuesta;
+  const existe = p.participantes.find(x=>x.id===id);
+  if(p.tipo==='individual'){
+    p.participantes = [{id, pct:100}];
+  } else {
+    if(existe) p.participantes = p.participantes.filter(x=>x.id!==id);
+    else p.participantes.push({id, pct:0});
+  }
+  renderProceso();
+}
+
+function setPct(id, val){
+  const p = state.propuesta.participantes.find(x=>x.id===id);
+  if(p) p.pct = parseFloat(val)||0;
+}
+
+async function analizarPliego(input){
+  if(!input.files[0]) return;
+  const statusEl = document.getElementById('pliego-status');
+  const resEl = document.getElementById('pliego-resultado');
+  statusEl.innerHTML = '<span class="spin"></span>Leyendo el pliego con IA... esto puede tomar 20-30 segundos...';
+  resEl.innerHTML = '';
+
+  const form = new FormData();
+  form.append('pliego', input.files[0]);
+  try {
+    const r = await fetch('/api/analizar-pliego', {method:'POST', body:form});
+    const res = await r.json();
+    if(res.ok){
+      state.pliego = res.pliego;
+      const pl = res.pliego;
+      const fmt_punt = pl.formatos_puntaje||{};
+      statusEl.innerHTML = '<span style="color:#3b6d11;font-weight:500">✓ Pliego analizado correctamente</span>';
+      resEl.innerHTML = `
+        <div style="background:#f7fbff;border:1px solid #b5d4f4;border-radius:8px;padding:1rem;margin-top:.75rem">
+          <div style="font-weight:600;margin-bottom:.5rem;font-size:14px">${pl.entidad||''} — ${pl.numero_proceso||''}</div>
+          <div style="font-size:13px;color:#444;margin-bottom:.5rem">${pl.objeto||''}</div>
+          <div style="font-size:12px;color:#666">Presupuesto: ${pl.presupuesto_oficial||'—'} · Plazo: ${pl.plazo_ejecucion||'—'} · Cierre: ${pl.fecha_cierre||'—'}</div>
+          <hr style="margin:.75rem 0;border:none;border-top:1px solid #e0e0e0">
+          <div style="font-size:12px;font-weight:600;color:#666;margin-bottom:.4rem">FORMATOS HABILITANTES:</div>
+          <div>${(pl.formatos_habilitantes||['F1','F2','F6']).map(f=>`<span class="fmt-chip hab">${f}</span>`).join('')}</div>
+          <div style="font-size:12px;font-weight:600;color:#666;margin:.75rem 0 .4rem">FORMATOS DE PUNTAJE QUE APLICAN:</div>
+          <div>${Object.entries(fmt_punt).filter(([k,v])=>v.aplica).map(([k,v])=>`<span class="fmt-chip">${k}${v.puntaje?' ('+v.puntaje+'pts)':''}</span>`).join('')||'<span style="color:#888;font-size:12px">Ninguno detectado</span>'}</div>
+          ${Object.values(fmt_punt).some(v=>v.bienes_relevantes?.length)?`
+          <div style="font-size:12px;font-weight:600;color:#666;margin:.75rem 0 .4rem">BIENES RELEVANTES (F9A):</div>
+          <div style="font-size:12px">${fmt_punt.F9A?.bienes_relevantes?.join(', ')||''}</div>`:''}
+        </div>`;
+    } else {
+      statusEl.innerHTML = `<span style="color:#a32d2d">Error: ${res.error}</span>`;
+    }
+  } catch(e){
+    statusEl.innerHTML = '<span style="color:#a32d2d">Error analizando el pliego</span>';
+  }
+}
+
+async function irAVerificar(){
+  if(!state.pliego){ alert('Primero sube y analiza el pliego'); return; }
+  if(state.propuesta.participantes.length===0){ alert('Selecciona al menos una empresa'); return; }
+  if(state.propuesta.tipo!=='individual'){
+    const total = state.propuesta.participantes.reduce((s,x)=>s+(+x.pct||0),0);
+    if(Math.round(total)!==100){ alert(`Los porcentajes deben sumar 100%. Suma actual: ${total.toFixed(1)}%`); return; }
+  }
+  document.querySelectorAll('.ntab')[2].click();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAB 3: VERIFICAR Y GENERAR
+// ══════════════════════════════════════════════════════════════════════════════
+async function renderVerificar(){
+  const el = document.getElementById('tab-verificar');
+  if(!state.pliego || state.propuesta.participantes.length===0){
+    el.innerHTML = `<div class="empty">Primero configura el proceso en la pestaña "Nuevo proceso".<br>Necesitas subir el pliego y seleccionar las empresas.</div>`;
+    return;
+  }
+
+  // Verificar cumplimiento
+  el.innerHTML = `<div class="section-title">Verificación y generación</div><div class="section-sub">Revisa el cumplimiento y genera los formatos Word</div><div class="empty"><span class="spin"></span>Verificando cumplimiento...</div>`;
+
+  const ver = await api('/api/verificar-cumplimiento', {
+    method:'POST',
+    body: JSON.stringify({
+      pliego: state.pliego,
+      empresas: state.propuesta.participantes,
+      experiencia_ids: state.experienciaSeleccionada||[]
+    })
+  });
+  state.verificacion = ver;
+
+  // Cargar experiencia disponible
+  const todasExp = [];
+  for(const p of state.propuesta.participantes){
+    const emp = state.empresas.find(e=>e.id===p.id);
+    if(emp?.experiencia?.length) emp.experiencia.forEach(x=>todasExp.push({...x, empresa: emp.razon_social}));
+  }
+
+  el.innerHTML = `
+    <div class="section-title">Verificación y generación</div>
+    <div class="section-sub">Revisa el cumplimiento y genera los formatos Word</div>
+
+    ${ver.alertas_docs?.length?`
+    <div class="card" style="border-color:#f09595">
+      <div class="card-title">⚠ Alertas de documentos</div>
+      ${ver.alertas_docs.map(a=>`<div class="alerta-${a.nivel}">⚠ ${a.empresa}: ${a.msg} (${a.doc})</div>`).join('')}
+    </div>`:''}
+
+    <div class="card">
+      <div class="card-title">Indicadores financieros vs pliego</div>
+      ${ver.empresas?.map(e=>`
+        <div style="margin-bottom:1rem">
+          <div style="font-size:13px;font-weight:600;margin-bottom:.4rem">${e.razon_social} ${e.pct!==100?`(${e.pct}%)`:''}:</div>
+          ${e.indicadores?.map(i=>`
+            <div class="indicador">
+              ${i.na?'<span class="ind-na">—</span>':i.cumple?'<span class="ind-ok">✓</span>':'<span class="ind-fail">✗</span>'}
+              <span style="min-width:120px">${i.label}:</span>
+              <span style="font-weight:500">${i.valor||'—'}</span>
+              ${!i.na?`<span style="font-size:12px;color:#888">(mínimo: ${i.requerido||'—'})</span>`:''}
+            </div>`).join('')||'<div style="font-size:12px;color:#888">Sin indicadores cargados</div>'}
+        </div>`).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">Selecciona la experiencia a incluir en la propuesta</div>
+      <div style="font-size:12px;color:#888;margin-bottom:.75rem">Marca los contratos que quieres incluir según lo que pide este pliego específico.</div>
+      ${todasExp.length===0?`<div style="font-size:13px;color:#999">No hay contratos de experiencia registrados para las empresas seleccionadas.</div>`:
+      todasExp.map(x=>`
+        <div class="exp-item">
+          <input class="exp-check" type="checkbox" onchange="toggleExp(${x.id}, this.checked)">
+          <div>
+            <div style="font-size:13px;font-weight:500">${x.entidad} <span class="tag">${x.empresa}</span></div>
+            <div style="font-size:12px;color:#888">${x.objeto?.slice(0,100)||''}</div>
+            <div style="font-size:12px;color:#666;margin-top:2px">${x.valor} · ${x.anio} · ${x.plazo} ${x.unspsc?'· '+x.unspsc:''}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">Formatos que se van a generar</div>
+      <div style="margin-bottom:.5rem">
+        <div style="font-size:12px;font-weight:600;color:#3b6d11;margin-bottom:.3rem">HABILITANTES:</div>
+        ${ver.formatos_a_generar?.filter(f=>['F1','F2','F6'].includes(f)).map(f=>`<span class="fmt-chip hab">${f}</span>`).join('')}
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:#185fa5;margin-bottom:.3rem">PUNTAJE:</div>
+        ${ver.formatos_a_generar?.filter(f=>!['F1','F2','F6','ANX4','F10','F11'].includes(f)).map(f=>`<span class="fmt-chip">${f}</span>`).join('')}
+      </div>
+      <div style="margin-top:.5rem">
+        <div style="font-size:12px;font-weight:600;color:#666;margin-bottom:.3rem">OTROS:</div>
+        ${ver.formatos_a_generar?.filter(f=>['ANX4','F10','F11'].includes(f)).map(f=>`<span class="fmt-chip">${f}</span>`).join('')}
+      </div>
+    </div>
+
+    <div id="gen-status"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:.5rem">
+      <button class="btn btn-success btn-primary" id="btn-generar" onclick="generarFormatos()" style="font-size:14px;padding:10px 24px">
+        ⬇ Generar y descargar todos los formatos Word
+      </button>
+    </div>`;
+}
+
+function toggleExp(id, checked){
+  if(!state.experienciaSeleccionada) state.experienciaSeleccionada = [];
+  if(checked) state.experienciaSeleccionada.push(id);
+  else state.experienciaSeleccionada = state.experienciaSeleccionada.filter(x=>x!==id);
+}
+
+async function generarFormatos(){
+  const btn = document.getElementById('btn-generar');
+  const status = document.getElementById('gen-status');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Generando documentos con IA... puede tomar 1-2 minutos...';
+
+  const body = {
+    pliego: state.pliego,
+    empresas: state.propuesta.participantes,
+    tipo_proponente: state.propuesta.tipo,
+    nombre_plural: state.propuesta.nombre_plural,
+    obj_plural: state.propuesta.obj_plural,
+    dur_plural: state.propuesta.dur_plural,
+    rep_plural: state.propuesta.rep_plural,
+    cc_rep_plural: state.propuesta.cc_rep_plural,
+    rep_suplente: state.propuesta.rep_suplente,
+    cc_suplente: state.propuesta.cc_suplente,
+    experiencia_ids: state.experienciaSeleccionada||[],
+    formatos: state.verificacion?.formatos_a_generar||[]
+  };
+
+  try {
+    const r = await fetch('/api/generar-formatos', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    if(r.ok){
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Propuesta_${state.pliego.numero_proceso||'proceso'}.zip`;
+      a.click();
+      status.innerHTML = '<div class="alerta-amarillo" style="border-color:#3b6d11;background:#eaf3de;color:#3b6d11">✓ Documentos generados y descargados. Revisa tu carpeta de descargas.</div>';
+    } else {
+      status.innerHTML = '<div class="alerta-rojo">Error generando los documentos. Intenta de nuevo.</div>';
+    }
+  } catch(e){
+    status.innerHTML = '<div class="alerta-rojo">Error de conexión. Intenta de nuevo.</div>';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '⬇ Generar y descargar todos los formatos Word';
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+cargarEmpresas().then(()=>renderEmpresas());
+</script>
+</body>
+</html>
