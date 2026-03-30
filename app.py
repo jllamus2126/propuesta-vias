@@ -519,25 +519,57 @@ Proponente: {prop} | Rep. legal: {rep} | CC: {cc}"""
         'ANX4':'Anexo4_PactoTransparencia','F10':'Formato10_Desempate',
         'F11':'Formato11_DatosPersonales'}
 
+    # Preparar textos para prompts (evitar f-strings anidadas)
     def cont_str(e):
-        return f"Contador:{e.get('contador_nombre','[Contador]')} CC:{e.get('contador_cc','')} TP:{e.get('contador_tp','')}\nRevisor:{e.get('revisor_nombre','No aplica')} CC:{e.get('revisor_cc','')} TP:{e.get('revisor_tp','')}\nCont.Ind:{e.get('cont_ind_nombre','No aplica')} CC:{e.get('cont_ind_cc','')} TP:{e.get('cont_ind_tp','')}\nExonerada parafiscales:{'Sí' if e.get('exonerada_parafiscales') else 'No'}"
+        exon = "Si" if e.get("exonerada_parafiscales") else "No"
+        return ("Contador:" + str(e.get("contador_nombre","[Contador]")) +
+                " CC:" + str(e.get("contador_cc","")) + " TP:" + str(e.get("contador_tp","")) +
+                "\nRevisor:" + str(e.get("revisor_nombre","No aplica")) +
+                " CC:" + str(e.get("revisor_cc","")) + " TP:" + str(e.get("revisor_tp","")) +
+                "\nCont.Ind:" + str(e.get("cont_ind_nombre","No aplica")) +
+                " CC:" + str(e.get("cont_ind_cc","")) + " TP:" + str(e.get("cont_ind_tp","")) +
+                "\nExonerada parafiscales:" + exon)
+
+    tipo_label = "Empresa individual" if tipo_prop == "individual" else tipo_prop.upper()
+    f2_label = "2A-CONSORCIO" if tipo_prop == "consorcio" else "2B-UNION TEMPORAL"
+    resp_label = "solidaria" if tipo_prop == "consorcio" else "proporcional"
+    mipyme_label = "Si" if any(e.get("es_mipyme") for e in emps) else "No"
+    mujeres_label = "Si" if any(e.get("tiene_mujeres") for e in emps) else "No"
+    disc_label = "Si" if any(e.get("tiene_discapacidad") for e in emps) else "No"
+    bienes_label = ("Bienes relevantes:" + ",".join(f9c.get("bienes_relevantes",[]))) if f9c.get("tiene_bienes_relevantes") else "Sin bienes relevantes especificos en este proceso."
+    titulares_label = ", ".join([e.get("rep_legal","") or e.get("razon_social","") for e in emps])
+
+    if tipo_prop == "individual":
+        datos_f1 = ("NIT:" + str(e0.get("nit","")) + " Dir:" + str(e0.get("direccion","")) +
+                    " Ciudad:" + str(e0.get("ciudad","")) + " Tel:" + str(e0.get("telefono","")) +
+                    " Email:" + str(e0.get("email","")))
+    else:
+        datos_f1 = emp_str
+
+    emp_f6_lines = []
+    for e in emps:
+        emp_f6_lines.append(
+            "Empresa:" + str(e.get("razon_social","")) + " NIT:" + str(e.get("nit","")) +
+            "\nRep:" + str(e.get("rep_legal","")) + " CC:" + str(e.get("cc_rep_legal","")) +
+            "\n" + cont_str(e))
+    emp_f6 = "\n".join(emp_f6_lines)
 
     prompts = {
-        'F1': f"Redacta FORMATO 1 - CARTA DE PRESENTACIÓN DE LA PROPUESTA completo según Res. 465/2024.\n{base}\nTipo:{'Empresa individual' if tipo_prop=='individual' else tipo_prop.upper()}\n{f'NIT:{e0.get(\"nit\",\"\")} Dir:{e0.get(\"direccion\",\"\")} Ciudad:{e0.get(\"ciudad\",\"\")} Tel:{e0.get(\"telefono\",\"\")} Email:{e0.get(\"email\",\"\")}' if tipo_prop=='individual' else emp_str}\nExperiencia:{chr(10)}{exp_str or 'Según documentos adjuntos'}\nTodos los numerales bajo juramento. Ciudad y fecha al inicio. Espacio firma al final.",
-        'F2': f"Redacta FORMATO {'2A-CONSORCIO' if tipo_prop=='consorcio' else '2B-UNIÓN TEMPORAL'} completo según Res. 465/2024.\n{base}\nNombre:{meta.get('nombre_plural','')} Objeto:{meta.get('obj_plural','')} Duración:{meta.get('dur_plural','')}\nRep:{meta.get('rep_plural','')} CC:{meta.get('cc_rep_plural','')} Suplente:{meta.get('rep_suplente','')} CC:{meta.get('cc_suplente','')}\nIntegrantes:\n{emp_str}\nResponsabilidad {'solidaria' if tipo_prop=='consorcio' else 'proporcional'}. Tabla integrantes con porcentajes. Firmas de cada rep legal.",
-        'F6': f"Redacta FORMATO 6 - PAGOS SEGURIDAD SOCIAL completo según Res. 465/2024 Art.50 Ley 789/2002.\n{base}\n{chr(10).join([f'Empresa:{e.get(\"razon_social\",\"\")} NIT:{e.get(\"nit\",\"\")}{chr(10)}Rep:{e.get(\"rep_legal\",\"\")} CC:{e.get(\"cc_rep_legal\",\"\")}{chr(10)}{cont_str(e)}' for e in emps])}\nDeclaración juramentada pago aportes salud, pensiones, riesgos, ICBF, SENA, cajas, FIC últimos 6 meses. Texto rep legal Y contador/revisor. Firmas al final.",
-        'F7A': f"Redacta FORMATO 7A - GERENCIA DE PROYECTOS completo según Res. 465/2024.\n{base}\nDir:{e0.get('direccion','')} Email:{e0.get('email','')}\nCompromiso juramentado de implementar programa de gerencia con profesional en ingeniería o arquitectura. Firmas.",
-        'F7B': f"Redacta FORMATO 7B - MAQUINARIA DE OBRA completo según Res. 465/2024.\n{base}\nCompromiso disponibilidad maquinaria requerida. Tabla equipos con condiciones funcionales. Firmas.",
-        'F7C': f"Redacta FORMATO 7C - PLAN DE CALIDAD completo según Res. 465/2024.\n{base}\nCompromiso plan de calidad normas técnicas colombianas. Firmas.",
-        'F8': f"Redacta FORMATO 8 - DISCAPACIDAD completo según Res. 465/2024.\n{base}\nCertificación total trabajadores y personas con discapacidad. Referencia certificado Ministerio de Trabajo. Tabla y firmas.",
-        'F9A': f"Redacta FORMATO 9A - INDUSTRIA NACIONAL completo según Res. 465/2024.\n{base}\nConfig:{json.dumps(f9c,ensure_ascii=False)}\n{'Bienes relevantes:'+','.join(f9c.get('bienes_relevantes',[])) if f9c.get('tiene_bienes_relevantes') else 'Sin bienes relevantes específicos en este proceso.'}\nOfrecimiento apoyo industria nacional. Tabla bienes. Firmas.",
-        'F9B': f"Redacta FORMATO 9B - COMPONENTE NACIONAL EXTRANJEROS completo según Res. 465/2024.\n{base}\nProponente extranjero incorporando componente nacional. Tabla y firmas.",
-        'F12': f"Redacta FORMATO 12 - EMPRESAS DE MUJERES completo según Res. 465/2024.\n{base}\nAcreditación empresa de mujeres normativa vigente. Declaración y firmas.",
-        'F13': f"Redacta FORMATO 13 - MIPYME completo según Res. 465/2024 Ley 590/2000.\n{base}\nAcreditación micro/pequeña/mediana empresa. Declaración y firmas.",
-        'F14': f"Redacta FORMATO 14 - CRITERIOS AMBIENTALES Y SOCIALES completo según Res. 465/2024 Decreto 142/2023.\n{base}\nCompromiso programa ambiental y social numeral 4.2.4 documento base. Firmas.",
-        'ANX4': f"Redacta ANEXO 4 - PACTO DE TRANSPARENCIA completo según Res. 465/2024.\n{base}\nTodos los compromisos i) al xv): cumplir ley, buena fe, no falsificación, libre competencia, no colusión, no sobornos, preguntas escritas, lealtad, compostura audiencias. Firma al final.",
-        'F10': f"Redacta FORMATO 10 - FACTORES DE DESEMPATE completo según Res. 465/2024.\n{base}\nMipyme:{'Sí' if any(e.get('es_mipyme') for e in emps) else 'No'} Mujeres:{'Sí' if any(e.get('tiene_mujeres') for e in emps) else 'No'} Discapacidad:{'Sí' if any(e.get('tiene_discapacidad') for e in emps) else 'No'}\nDeclaración factores desempate aplicables. Firmas.",
-        'F11': f"Redacta FORMATO 11 - DATOS PERSONALES completo según Res. 465/2024 Ley 1581/2012.\n{base}\nTitulares:{', '.join([e.get('rep_legal','') or e.get('razon_social','') for e in emps])}\nAutorización tratamiento datos personales. Firmas.",
+        "F1": f"Redacta FORMATO 1 - CARTA DE PRESENTACION DE LA PROPUESTA completo segun Res. 465/2024.\n{base}\nTipo:{tipo_label}\n{datos_f1}\nExperiencia:\n{exp_str or 'Segun documentos adjuntos'}\nTodos los numerales bajo juramento. Ciudad y fecha al inicio. Espacio firma al final.",
+        "F2": f"Redacta FORMATO {f2_label} completo segun Res. 465/2024.\n{base}\nNombre:{meta.get('nombre_plural','')} Objeto:{meta.get('obj_plural','')} Duracion:{meta.get('dur_plural','')}\nRep:{meta.get('rep_plural','')} CC:{meta.get('cc_rep_plural','')} Suplente:{meta.get('rep_suplente','')} CC:{meta.get('cc_suplente','')}\nIntegrantes:\n{emp_str}\nResponsabilidad {resp_label}. Tabla integrantes con porcentajes. Firmas de cada rep legal.",
+        "F6": f"Redacta FORMATO 6 - PAGOS SEGURIDAD SOCIAL completo segun Res. 465/2024 Art.50 Ley 789/2002.\n{base}\n{emp_f6}\nDeclaracion juramentada pago aportes salud, pensiones, riesgos, ICBF, SENA, cajas, FIC ultimos 6 meses. Texto rep legal Y contador/revisor. Firmas al final.",
+        "F7A": f"Redacta FORMATO 7A - GERENCIA DE PROYECTOS completo segun Res. 465/2024.\n{base}\nDir:{e0.get('direccion','')} Email:{e0.get('email','')}\nCompromiso juramentado programa de gerencia con profesional en ingenieria o arquitectura. Firmas.",
+        "F7B": f"Redacta FORMATO 7B - MAQUINARIA DE OBRA completo segun Res. 465/2024.\n{base}\nCompromiso disponibilidad maquinaria requerida. Tabla equipos con condiciones funcionales. Firmas.",
+        "F7C": f"Redacta FORMATO 7C - PLAN DE CALIDAD completo segun Res. 465/2024.\n{base}\nCompromiso plan de calidad normas tecnicas colombianas. Firmas.",
+        "F8": f"Redacta FORMATO 8 - DISCAPACIDAD completo segun Res. 465/2024.\n{base}\nCertificacion total trabajadores y personas con discapacidad. Referencia certificado Ministerio de Trabajo. Tabla y firmas.",
+        "F9A": f"Redacta FORMATO 9A - INDUSTRIA NACIONAL completo segun Res. 465/2024.\n{base}\n{bienes_label}\nOfrecimiento apoyo industria nacional. Tabla bienes. Firmas.",
+        "F9B": f"Redacta FORMATO 9B - COMPONENTE NACIONAL EXTRANJEROS completo segun Res. 465/2024.\n{base}\nProponente extranjero incorporando componente nacional. Tabla y firmas.",
+        "F12": f"Redacta FORMATO 12 - EMPRESAS DE MUJERES completo segun Res. 465/2024.\n{base}\nAcreditacion empresa de mujeres normativa vigente. Declaracion y firmas.",
+        "F13": f"Redacta FORMATO 13 - MIPYME completo segun Res. 465/2024 Ley 590/2000.\n{base}\nAcreditacion micro/pequena/mediana empresa. Declaracion y firmas.",
+        "F14": f"Redacta FORMATO 14 - CRITERIOS AMBIENTALES Y SOCIALES completo segun Res. 465/2024 Decreto 142/2023.\n{base}\nCompromiso programa ambiental y social numeral 4.2.4 documento base. Firmas.",
+        "ANX4": f"Redacta ANEXO 4 - PACTO DE TRANSPARENCIA completo segun Res. 465/2024.\n{base}\nTodos los compromisos i) al xv): cumplir ley, buena fe, no falsificacion, libre competencia, no colusion, no sobornos, preguntas escritas, lealtad, compostura audiencias. Firma al final.",
+        "F10": f"Redacta FORMATO 10 - FACTORES DE DESEMPATE completo segun Res. 465/2024.\n{base}\nMipyme:{mipyme_label} Mujeres:{mujeres_label} Discapacidad:{disc_label}\nDeclaracion factores desempate aplicables. Firmas.",
+        "F11": f"Redacta FORMATO 11 - DATOS PERSONALES completo segun Res. 465/2024 Ley 1581/2012.\n{base}\nTitulares:{titulares_label}\nAutorizacion tratamiento datos personales. Firmas.",
     }
 
     prompt = prompts.get(fid,'')
