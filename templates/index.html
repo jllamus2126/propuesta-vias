@@ -237,9 +237,18 @@ function formEmpresa(id){
           ${renderDocsSeccion(e.documentos||[], 'rup', id)}
         </div>
         <div>
+          <div style="font-size:12px;color:#555;font-weight:500;margin-bottom:5px">RUT (PDF)</div>
+          <div class="upload-box" style="padding:.75rem">
+            <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'rut',this,'rut-status',true)">
+            <p>Sube el PDF &#8212; la IA extrae datos</p>
+          </div>
+          <div id="rut-status"></div>
+          ${renderDocsSeccion(e.documentos||[], 'rut', id)}
+        </div>
+        <div>
           <div style="font-size:12px;color:#555;font-weight:500;margin-bottom:5px">Cédula representante legal (PDF)</div>
           <div class="upload-box" style="padding:.75rem">
-            <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'cedula',this,'cedula-status',false)">
+            <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'cedula',this,'cedula-status',true)">
             <p>Subir PDF</p>
           </div>
           <div id="cedula-status"></div>
@@ -248,8 +257,8 @@ function formEmpresa(id){
         <div>
           <div style="font-size:12px;color:#555;font-weight:500;margin-bottom:5px">REDAM representante legal (PDF)</div>
           <div class="upload-box" style="padding:.75rem">
-            <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'redam',this,'redam-status',false)">
-            <p>Subir PDF</p>
+            <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'redam',this,'redam-status',true)">
+            <p>Subir PDF &#8212; verifica vigencia</p>
           </div>
           <div id="redam-status"></div>
           ${renderDocsSeccion(e.documentos||[], 'redam', id)}
@@ -257,14 +266,14 @@ function formEmpresa(id){
         <div>
           <div style="font-size:12px;color:#555;font-weight:500;margin-bottom:5px">Estados financieros (PDF)</div>
           <div class="upload-box" style="padding:.75rem">
-            <input type="file" accept=".pdf,.xlsx" onchange="subirDoc(${id||'null'},'estados_financieros',this,'ef-status',false)">
-            <p>Subir PDF o Excel</p>
+            <input type="file" accept=".pdf,.xlsx" onchange="subirDoc(${id||'null'},'estados_financieros',this,'ef-status',true)">
+            <p>Sube el PDF &#8212; extrae indicadores</p>
           </div>
           <div id="ef-status"></div>
           ${renderDocsSeccion(e.documentos||[], 'estados_financieros', id)}
         </div>
         <div>
-          <div style="font-size:12px;color:#555;font-weight:500;margin-bottom:5px">Formato 5 — Capacidad residual (PDF)</div>
+          <div style="font-size:12px;color:#555;font-weight:500;margin-bottom:5px">Formato 5 &#8212; Capacidad residual (PDF)</div>
           <div class="upload-box" style="padding:.75rem">
             <input type="file" accept=".pdf,.docx" onchange="subirDoc(${id||'null'},'capacidad_residual',this,'cr-status',false)">
             <p>Subir ya diligenciado</p>
@@ -273,7 +282,30 @@ function formEmpresa(id){
           ${renderDocsSeccion(e.documentos||[], 'capacidad_residual', id)}
         </div>
       </div>
-    </div>
+      ${e.rep_es_ingeniero ? `
+      <div class="sep"></div>
+      <div style="font-size:12px;font-weight:600;color:#854f0b;margin-bottom:.5rem">Documentos del representante legal ingeniero</div>
+      <div class="g2">
+        <div>
+          <div style="font-size:12px;color:#555;font-weight:500;margin-bottom:5px">Tarjeta profesional COPNIA (PDF)</div>
+          <div class="upload-box" style="padding:.75rem">
+            <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'matricula_rep',this,'mat-rep-status',true)">
+            <p>Subir PDF &#8212; extrae matrícula y vigencia</p>
+          </div>
+          <div id="mat-rep-status"></div>
+          ${renderDocsSeccion(e.documentos||[], 'matricula_rep', id)}
+        </div>
+        <div>
+          <div style="font-size:12px;color:#555;font-weight:500;margin-bottom:5px">Certificado de vigencia COPNIA (PDF)</div>
+          <div class="upload-box" style="padding:.75rem">
+            <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'cert_copnia',this,'cert-copnia-status',true)">
+            <p>Subir PDF &#8212; verifica vigencia</p>
+          </div>
+          <div id="cert-copnia-status"></div>
+          ${renderDocsSeccion(e.documentos||[], 'cert_copnia', id)}
+        </div>
+      </div>` : ''}
+    </div>    </div>
 
     <div class="card">
       <div class="ctitle">Capacidad financiera (se llena automáticamente del RUP)</div>
