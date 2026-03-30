@@ -1,11 +1,12 @@
 from flask import Flask, request, jsonify, render_template, send_file
-import anthropic, os, json, sqlite3, io, zipfile, requests
+import anthropic, os, json, sqlite3, io, zipfile, requests, base64
 from datetime import datetime, timedelta
 import cloudinary, cloudinary.uploader, cloudinary.api
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from pypdf import PdfReader
+from pypdf import PdfReader, PdfWriter
+from diligenciar import diligenciar_formato
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 30 * 1024 * 1024
@@ -304,10 +305,12 @@ es_mipyme=true si dice PEQUEÑA/MEDIANA/MICRO.''', txt, 10000),
             'tp_cont_ind': jp('{"nombre_completo":"","numero_tp":"","fecha_vencimiento":"YYYY-MM-DD"}', txt, 3000),
             'cert_jcc_cont_ind': jp('{"nombre_completo":"","numero_tp":"","fecha_vencimiento":"YYYY-MM-DD"}', txt, 3000),
             'estados_financieros': jp('''{"fecha_corte":"YYYY-MM-DD","activo_corriente":"","pasivo_corriente":"","activo_total":"",
-"pasivo_total":"","patrimonio":"","utilidad_operacional":"","capital_trabajo":"","liquidez":"","endeudamiento":"","rentabilidad":"","rentabilidad_activo":""}
-Calcula: capital_trabajo=activo_corriente-pasivo_corriente, liquidez=activo_corriente/pasivo_corriente,
-endeudamiento=pasivo_total/activo_total, rentabilidad=utilidad_operacional/patrimonio,
-rentabilidad_activo=utilidad_operacional/activo_total''', txt, 8000),
+"pasivo_total":"","patrimonio":"","utilidad_operacional":"","capital_trabajo":"","liquidez":"","endeudamiento":"","rentabilidad":"","rentabilidad_activo":"",
+"contador_nombre":"","contador_cc":"","contador_tp":""}
+Calcula: capital_trabajo=activo_corriente-pasivo_corriente, liquidez=activo_corriente/pasivo_corriente (2 decimales),
+endeudamiento=pasivo_total/activo_total (2 decimales), rentabilidad=utilidad_operacional/patrimonio (2 decimales),
+rentabilidad_activo=utilidad_operacional/activo_total (2 decimales).
+contador_nombre, contador_cc, contador_tp = datos del contador o revisor fiscal que firma los estados financieros.''', txt, 8000),
             'cert_discapacidad': jp('{"empresa":"","total_trabajadores":"","trabajadores_discapacidad":"","fecha_expedicion":"YYYY-MM-DD","fecha_vencimiento":"YYYY-MM-DD"}', txt, 4000),
             'redam': jp('{"nombre":"","cedula":"","fecha_expedicion":"YYYY-MM-DD","fecha_vencimiento":"YYYY-MM-DD","inhabilitado":false}', txt, 4000),
             'acta_accionaria': jp('{"empresa":"","porcentaje_mujeres":"","fecha_acta":"YYYY-MM-DD"}', txt, 5000),
@@ -356,6 +359,9 @@ rentabilidad_activo=utilidad_operacional/activo_total''', txt, 8000),
                     add('capital_trabajo',datos.get('capital_trabajo')); add('patrimonio',datos.get('patrimonio'))
                     add('liquidez',datos.get('liquidez')); add('endeudamiento',datos.get('endeudamiento'))
                     add('rentabilidad',datos.get('rentabilidad')); add('rentabilidad_activo',datos.get('rentabilidad_activo'))
+                    # Datos del contador que firma los estados financieros
+                    add('contador_nombre',datos.get('contador_nombre')); add('contador_cc',datos.get('contador_cc'))
+                    add('contador_tp',datos.get('contador_tp'))
                 elif tipo in ['cedula_contador','tp_contador','cert_jcc_contador']:
                     add('contador_nombre',datos.get('nombre_completo'))
                     add('contador_cc',datos.get('numero_cedula') or datos.get('numero_cc'))
@@ -386,29 +392,88 @@ rentabilidad_activo=utilidad_operacional/activo_total''', txt, 8000),
     db.commit(); db.close()
     return jsonify({'ok':True,'url':url,'datos_extraidos':datos,'fecha_vencimiento':fecha_venc})
 
-# ─── ANALIZAR PLIEGO ─────────────────────────────────────────────────────────
+# --- ANALIZAR PLIEGO ---
 @app.route('/api/analizar-pliego', methods=['POST'])
 def analizar_pliego():
     archivo = request.files.get('pliego')
-    if not archivo: return jsonify({'error':'No se recibió el pliego'}),400
-    txt = pdf_texto(archivo.read(), 18000)
-    prompt = f'''Analiza este pliego de condiciones colombiano (Res. 465/2024 infraestructura de transporte) y extrae en JSON:
-{{"entidad":"","ciudad_entidad":"","direccion_entidad":"","numero_proceso":"","objeto":"",
-"presupuesto_oficial":"","plazo_ejecucion":"","fecha_cierre":"","lote":"",
-"requisitos_habilitantes":{{"financieros":{{"liquidez_minima":"","endeudamiento_maximo":"","rentabilidad_minima":"","capital_trabajo_minimo":""}},
-"tecnicos":{{"experiencia_minima_valor":"","capacidad_residual_minima":""}}}},
-"formatos_puntaje":{{"F7A":{{"aplica":false,"puntaje":""}},"F7B":{{"aplica":false,"puntaje":""}},"F7C":{{"aplica":false,"puntaje":""}},
-"F8":{{"aplica":false,"puntaje":""}},"F9A":{{"aplica":false,"puntaje":"","tiene_bienes_relevantes":false,"bienes_relevantes":[],"solo_nacionales":true}},
-"F9B":{{"aplica":false,"puntaje":""}},"F12":{{"aplica":false,"puntaje":""}},"F13":{{"aplica":false,"puntaje":""}},"F14":{{"aplica":false,"puntaje":""}}}},
-"formula_consorcio":"","total_puntaje":"100"}}
-Texto del pliego:
-{txt}
-Solo responde el JSON.'''
+    if not archivo: return jsonify({'error':'No se recibio el pliego'}),400
+    ab = archivo.read()
+
+    # Extraer primeras 30 paginas que es donde estan requisitos y puntajes
+    # y mandarlo como PDF directo a Claude para mejor lectura
     try:
-        resp = claude(prompt, 2000)
+        reader = PdfReader(io.BytesIO(ab))
+        total_pages = len(reader.pages)
+        # Tomar primeras 35 paginas maximo
+        pages_to_use = min(35, total_pages)
+        from pypdf import PdfWriter
+        writer = PdfWriter()
+        for i in range(pages_to_use):
+            writer.add_page(reader.pages[i])
+        buf = io.BytesIO()
+        writer.write(buf)
+        buf.seek(0)
+        pdf_reducido = base64.standard_b64encode(buf.read()).decode('utf-8')
+        usar_pdf = True
+    except:
+        usar_pdf = False
+        pdf_reducido = None
+
+    schema = """{
+  "entidad":"","ciudad_entidad":"","direccion_entidad":"","numero_proceso":"","objeto":"",
+  "presupuesto_oficial":"","plazo_ejecucion":"","fecha_cierre":"","lote":"",
+  "requisitos_habilitantes":{
+    "financieros":{"liquidez_minima":"","endeudamiento_maximo":"","rentabilidad_minima":"","capital_trabajo_minimo":""},
+    "tecnicos":{"experiencia_minima_valor":"","capacidad_residual_minima":""}
+  },
+  "formatos_puntaje":{
+    "F7A":{"aplica":false,"puntaje":""},
+    "F7B":{"aplica":false,"puntaje":""},
+    "F7C":{"aplica":false,"puntaje":""},
+    "F8":{"aplica":false,"puntaje":""},
+    "F9A":{"aplica":false,"puntaje":"","tiene_bienes_relevantes":false,"bienes_relevantes":[],"solo_nacionales":true},
+    "F9B":{"aplica":false,"puntaje":""},
+    "F12":{"aplica":false,"puntaje":""},
+    "F13":{"aplica":false,"puntaje":""},
+    "F14":{"aplica":false,"puntaje":""}
+  },
+  "formula_consorcio":"","total_puntaje":"100"
+}"""
+
+    instrucciones = """INSTRUCCIONES IMPORTANTES para identificar formatos de puntaje:
+- F7A aplica si el pliego menciona "Programa de gerencia de proyectos" como factor de calidad con puntaje
+- F7B aplica si el pliego menciona "Disponibilidad y condiciones funcionales de la maquinaria" con puntaje  
+- F7C aplica si el pliego menciona "Plan de calidad" como factor evaluable con puntaje
+- F8 aplica si el pliego asigna puntaje por "vinculacion de personas en condicion de discapacidad"
+- F9A aplica si el pliego asigna puntaje por "industria nacional" a proponentes nacionales
+- F9B aplica si el pliego asigna puntaje por "incorporacion de componente nacional" a extranjeros
+- F12 aplica si el pliego asigna puntaje por "emprendimientos y empresas de mujeres"
+- F13 aplica si el pliego asigna puntaje por ser "Mipyme"
+- F14 aplica si el pliego asigna puntaje por "criterios adicionales ambientales y sociales"
+- Para cada formato que aplica, extrae el puntaje exacto que asigna el pliego
+- tiene_bienes_relevantes en F9A = true solo si el pliego lista bienes nacionales especificos en la Matriz 4
+Solo responde el JSON sin texto adicional."""
+
+    try:
+        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        if usar_pdf and pdf_reducido:
+            # Mandar PDF directo — mejor lectura de tablas y estructura
+            messages_content = [
+                {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": pdf_reducido}},
+                {"type": "text", "text": f"Analiza este pliego de condiciones colombiano (pliego tipo infraestructura de transporte Res. 465/2024) y extrae en JSON exacto:\n{schema}\n{instrucciones}"}
+            ]
+        else:
+            txt = pdf_texto(ab, 18000)
+            messages_content = [
+                {"type": "text", "text": f"Analiza este pliego de condiciones colombiano y extrae en JSON exacto:\n{schema}\n{instrucciones}\nTexto del pliego:\n{txt}"}
+            ]
+        r = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=2000,
+            messages=[{"role": "user", "content": messages_content}])
+        resp = r.content[0].text
         return jsonify({'ok':True,'pliego':parse_json(resp)})
     except Exception as e:
         return jsonify({'error':str(e)}),500
+
 
 # ─── VERIFICAR CUMPLIMIENTO ───────────────────────────────────────────────────
 @app.route('/api/verificar-cumplimiento', methods=['POST'])
@@ -473,116 +538,73 @@ def verificar_cumplimiento():
 def generar_formato():
     data = request.json
     fid = data.get('formato_id')
-    pl = data.get('pliego',{})
-    emps = data.get('empresas_data',[])
-    tipo_prop = data.get('tipo_proponente','individual')
-    meta = data.get('meta',{})
-    f9c = data.get('f9_config',{})
-    exp_sel = data.get('experiencia_sel',[])
+    pl = data.get('pliego', {})
+    emps = data.get('empresas_data', [])
+    tipo_prop = data.get('tipo_proponente', 'individual')
+    meta = data.get('meta', {})
+    f9c = data.get('f9_config', {})
+    exp_sel = data.get('experiencia_sel', [])
 
-    e0 = emps[0] if emps else {}
-    prop = e0.get('razon_social','') if tipo_prop=='individual' else f"{'CONSORCIO' if tipo_prop=='consorcio' else 'UNIÓN TEMPORAL'} {meta.get('nombre_plural','')}"
-    rep = e0.get('rep_legal','') if tipo_prop=='individual' else meta.get('rep_plural','')
-    cc = e0.get('cc_rep_legal','') if tipo_prop=='individual' else meta.get('cc_rep_plural','')
+    # Ruta de la plantilla oficial
+    nombres_plantilla = {
+        'F1':'F1.docx','F2':'F2.docx','F6':'F6.docx',
+        'F7A':'F7.docx','F7B':'F7.docx','F7C':'F7.docx',
+        'F8':'F8.docx','F9A':'F9.docx','F9B':'F9.docx',
+        'F10':'F10.docx','F11':'F11.docx','F12':'F12.docx',
+        'F13':'F13.docx','F14':'F14.docx','ANX4':'ANX4.docx',
+    }
+    plantilla_nombre = nombres_plantilla.get(fid)
+    if not plantilla_nombre:
+        return jsonify({'error': f'Formato {fid} no reconocido'}), 400
 
-    base = f"""Entidad: {pl.get('entidad','')} | Ciudad: {pl.get('ciudad_entidad','')}
-Proceso No.: {pl.get('numero_proceso','')} | Fecha de cierre: {pl.get('fecha_cierre','')}
-Objeto: {pl.get('objeto','')}
-Presupuesto: {pl.get('presupuesto_oficial','')} | Plazo: {pl.get('plazo_ejecucion','')}
-Proponente: {prop} | Rep. legal: {rep} | CC: {cc}"""
+    template_path = os.path.join(os.path.dirname(__file__), 'templates', 'formatos', plantilla_nombre)
+    if not os.path.exists(template_path):
+        return jsonify({'error': f'Plantilla {plantilla_nombre} no encontrada'}), 500
 
-    emp_str = '\n'.join([f"- {e.get('razon_social','')} NIT:{e.get('nit','')} Rep:{e.get('rep_legal','')} CC:{e.get('cc_rep_legal','')} {e.get('pct',100)}%" for e in emps])
-    exp_str = '\n'.join([f"{i+1}. {x.get('entidad','')} | {x.get('objeto','')[:60]} | {x.get('valor','')} | Inicio:{x.get('fecha_inicio','')} Fin:{x.get('fecha_fin','')} | Cons.RUP:{x.get('consecutivo_rup','')}" for i,x in enumerate(exp_sel)])
+    # Completar datos de empresas desde DB
+    db = get_db()
+    empresas_completas = []
+    for ed in emps:
+        e = db.execute('SELECT * FROM empresas WHERE id=?', (ed['id'],)).fetchone()
+        if e:
+            ec = dict(e)
+            ec['pct'] = ed.get('pct', 100)
+            empresas_completas.append(ec)
+    db.close()
 
-    titulos = {'F1':'FORMATO 1\nCARTA DE PRESENTACIÓN DE LA PROPUESTA',
-        'F2':f"FORMATO {'2A' if tipo_prop=='consorcio' else '2B'}\nCONFORMACIÓN DE PROPONENTE PLURAL",
-        'F6':'FORMATO 6\nPAGOS DE SEGURIDAD SOCIAL Y APORTES LEGALES',
-        'F7A':'FORMATO 7A\nPROGRAMA DE GERENCIA DE PROYECTOS',
-        'F7B':'FORMATO 7B\nDISPONIBILIDAD Y CONDICIONES DE MAQUINARIA',
-        'F7C':'FORMATO 7C\nPLAN DE CALIDAD',
-        'F8':'FORMATO 8\nVINCULACIÓN PERSONAS CON DISCAPACIDAD',
-        'F9A':'FORMATO 9A\nPUNTAJE DE INDUSTRIA NACIONAL',
-        'F9B':'FORMATO 9B\nINCORPORACIÓN COMPONENTE NACIONAL',
-        'F12':'FORMATO 12\nACREDITACIÓN EMPRESAS DE MUJERES',
-        'F13':'FORMATO 13\nACREDITACIÓN MIPYME',
-        'F14':'FORMATO 14\nCRITERIOS AMBIENTALES Y SOCIALES',
-        'ANX4':'ANEXO 4\nPACTO DE TRANSPARENCIA',
-        'F10':'FORMATO 10\nFACTORES DE DESEMPATE',
-        'F11':'FORMATO 11\nAUTORIZACIÓN DATOS PERSONALES'}
+    if not empresas_completas:
+        return jsonify({'error': 'No se encontraron empresas'}), 400
 
-    nombres_arch = {'F1':'Formato1_CartaPresentacion','F2':'Formato2_Consorcio_UT',
+    try:
+        word_bytes = diligenciar_formato(
+            fid=fid,
+            template_path=template_path,
+            pliego=pl,
+            empresas=empresas_completas,
+            tipo_prop=tipo_prop,
+            meta=meta,
+            exp_sel=exp_sel,
+            f9_config=f9c
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    nombres_archivo = {
+        'F1':'Formato1_CartaPresentacion','F2':'Formato2_Consorcio_UT',
         'F6':'Formato6_SeguridadSocial','F7A':'Formato7A_GerenciaProyectos',
         'F7B':'Formato7B_Maquinaria','F7C':'Formato7C_PlanCalidad',
         'F8':'Formato8_Discapacidad','F9A':'Formato9A_IndustriaNacional',
         'F9B':'Formato9B_ComponenteNacional','F12':'Formato12_EmpresasMujeres',
         'F13':'Formato13_Mipyme','F14':'Formato14_AmbientalSocial',
         'ANX4':'Anexo4_PactoTransparencia','F10':'Formato10_Desempate',
-        'F11':'Formato11_DatosPersonales'}
-
-    # Preparar textos para prompts (evitar f-strings anidadas)
-    def cont_str(e):
-        exon = "Si" if e.get("exonerada_parafiscales") else "No"
-        return ("Contador:" + str(e.get("contador_nombre","[Contador]")) +
-                " CC:" + str(e.get("contador_cc","")) + " TP:" + str(e.get("contador_tp","")) +
-                "\nRevisor:" + str(e.get("revisor_nombre","No aplica")) +
-                " CC:" + str(e.get("revisor_cc","")) + " TP:" + str(e.get("revisor_tp","")) +
-                "\nCont.Ind:" + str(e.get("cont_ind_nombre","No aplica")) +
-                " CC:" + str(e.get("cont_ind_cc","")) + " TP:" + str(e.get("cont_ind_tp","")) +
-                "\nExonerada parafiscales:" + exon)
-
-    tipo_label = "Empresa individual" if tipo_prop == "individual" else tipo_prop.upper()
-    f2_label = "2A-CONSORCIO" if tipo_prop == "consorcio" else "2B-UNION TEMPORAL"
-    resp_label = "solidaria" if tipo_prop == "consorcio" else "proporcional"
-    mipyme_label = "Si" if any(e.get("es_mipyme") for e in emps) else "No"
-    mujeres_label = "Si" if any(e.get("tiene_mujeres") for e in emps) else "No"
-    disc_label = "Si" if any(e.get("tiene_discapacidad") for e in emps) else "No"
-    bienes_label = ("Bienes relevantes:" + ",".join(f9c.get("bienes_relevantes",[]))) if f9c.get("tiene_bienes_relevantes") else "Sin bienes relevantes especificos en este proceso."
-    titulares_label = ", ".join([e.get("rep_legal","") or e.get("razon_social","") for e in emps])
-
-    if tipo_prop == "individual":
-        datos_f1 = ("NIT:" + str(e0.get("nit","")) + " Dir:" + str(e0.get("direccion","")) +
-                    " Ciudad:" + str(e0.get("ciudad","")) + " Tel:" + str(e0.get("telefono","")) +
-                    " Email:" + str(e0.get("email","")))
-    else:
-        datos_f1 = emp_str
-
-    emp_f6_lines = []
-    for e in emps:
-        emp_f6_lines.append(
-            "Empresa:" + str(e.get("razon_social","")) + " NIT:" + str(e.get("nit","")) +
-            "\nRep:" + str(e.get("rep_legal","")) + " CC:" + str(e.get("cc_rep_legal","")) +
-            "\n" + cont_str(e))
-    emp_f6 = "\n".join(emp_f6_lines)
-
-    prompts = {
-        "F1": f"Redacta FORMATO 1 - CARTA DE PRESENTACION DE LA PROPUESTA completo segun Res. 465/2024.\n{base}\nTipo:{tipo_label}\n{datos_f1}\nExperiencia:\n{exp_str or 'Segun documentos adjuntos'}\nTodos los numerales bajo juramento. Ciudad y fecha al inicio. Espacio firma al final.",
-        "F2": f"Redacta FORMATO {f2_label} completo segun Res. 465/2024.\n{base}\nNombre:{meta.get('nombre_plural','')} Objeto:{meta.get('obj_plural','')} Duracion:{meta.get('dur_plural','')}\nRep:{meta.get('rep_plural','')} CC:{meta.get('cc_rep_plural','')} Suplente:{meta.get('rep_suplente','')} CC:{meta.get('cc_suplente','')}\nIntegrantes:\n{emp_str}\nResponsabilidad {resp_label}. Tabla integrantes con porcentajes. Firmas de cada rep legal.",
-        "F6": f"Redacta FORMATO 6 - PAGOS SEGURIDAD SOCIAL completo segun Res. 465/2024 Art.50 Ley 789/2002.\n{base}\n{emp_f6}\nDeclaracion juramentada pago aportes salud, pensiones, riesgos, ICBF, SENA, cajas, FIC ultimos 6 meses. Texto rep legal Y contador/revisor. Firmas al final.",
-        "F7A": f"Redacta FORMATO 7A - GERENCIA DE PROYECTOS completo segun Res. 465/2024.\n{base}\nDir:{e0.get('direccion','')} Email:{e0.get('email','')}\nCompromiso juramentado programa de gerencia con profesional en ingenieria o arquitectura. Firmas.",
-        "F7B": f"Redacta FORMATO 7B - MAQUINARIA DE OBRA completo segun Res. 465/2024.\n{base}\nCompromiso disponibilidad maquinaria requerida. Tabla equipos con condiciones funcionales. Firmas.",
-        "F7C": f"Redacta FORMATO 7C - PLAN DE CALIDAD completo segun Res. 465/2024.\n{base}\nCompromiso plan de calidad normas tecnicas colombianas. Firmas.",
-        "F8": f"Redacta FORMATO 8 - DISCAPACIDAD completo segun Res. 465/2024.\n{base}\nCertificacion total trabajadores y personas con discapacidad. Referencia certificado Ministerio de Trabajo. Tabla y firmas.",
-        "F9A": f"Redacta FORMATO 9A - INDUSTRIA NACIONAL completo segun Res. 465/2024.\n{base}\n{bienes_label}\nOfrecimiento apoyo industria nacional. Tabla bienes. Firmas.",
-        "F9B": f"Redacta FORMATO 9B - COMPONENTE NACIONAL EXTRANJEROS completo segun Res. 465/2024.\n{base}\nProponente extranjero incorporando componente nacional. Tabla y firmas.",
-        "F12": f"Redacta FORMATO 12 - EMPRESAS DE MUJERES completo segun Res. 465/2024.\n{base}\nAcreditacion empresa de mujeres normativa vigente. Declaracion y firmas.",
-        "F13": f"Redacta FORMATO 13 - MIPYME completo segun Res. 465/2024 Ley 590/2000.\n{base}\nAcreditacion micro/pequena/mediana empresa. Declaracion y firmas.",
-        "F14": f"Redacta FORMATO 14 - CRITERIOS AMBIENTALES Y SOCIALES completo segun Res. 465/2024 Decreto 142/2023.\n{base}\nCompromiso programa ambiental y social numeral 4.2.4 documento base. Firmas.",
-        "ANX4": f"Redacta ANEXO 4 - PACTO DE TRANSPARENCIA completo segun Res. 465/2024.\n{base}\nTodos los compromisos i) al xv): cumplir ley, buena fe, no falsificacion, libre competencia, no colusion, no sobornos, preguntas escritas, lealtad, compostura audiencias. Firma al final.",
-        "F10": f"Redacta FORMATO 10 - FACTORES DE DESEMPATE completo segun Res. 465/2024.\n{base}\nMipyme:{mipyme_label} Mujeres:{mujeres_label} Discapacidad:{disc_label}\nDeclaracion factores desempate aplicables. Firmas.",
-        "F11": f"Redacta FORMATO 11 - DATOS PERSONALES completo segun Res. 465/2024 Ley 1581/2012.\n{base}\nTitulares:{titulares_label}\nAutorizacion tratamiento datos personales. Firmas.",
+        'F11':'Formato11_DatosPersonales',
     }
-
-    prompt = prompts.get(fid,'')
-    if not prompt: return jsonify({'error':f'Formato {fid} no reconocido'}),400
-
-    try: texto = claude(prompt, 2500)
-    except Exception as e: return jsonify({'error':str(e)}),500
-
     proceso = pl.get('numero_proceso','proceso').replace('/','_')
-    word = crear_word(titulos.get(fid,fid), texto, proceso, fid)
-    return send_file(io.BytesIO(word),
+    nombre = f"{nombres_archivo.get(fid,fid)}_{proceso}.docx"
+    return send_file(io.BytesIO(word_bytes),
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        as_attachment=True, download_name=f"{nombres_arch.get(fid,fid)}_{proceso}.docx")
+        as_attachment=True, download_name=nombre)
+
 
 # ─── DESCARGAR ZIP DOCUMENTOS ─────────────────────────────────────────────────
 @app.route('/api/descargar-docs-zip', methods=['POST'])
