@@ -861,45 +861,129 @@ async function generarFormatos(){
   const btn = document.getElementById('btn-gen');
   const status = document.getElementById('gen-status');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span>Generando con IA... puede tomar 2-3 minutos';
 
-  // Actualizar bienes relevantes si fueron editados
   const bEd = document.getElementById('bienes-edit');
   if(bEd) ST.f9Config.bienes_relevantes = bEd.value.split('\n').filter(x=>x.trim());
 
-  const body = {
-    pliego: ST.pliego,
-    empresas: ST.prop.participantes,
-    tipo_proponente: ST.prop.tipo,
-    nombre_plural: ST.prop.nombre_plural,
-    obj_plural: ST.prop.obj_plural,
-    dur_plural: ST.prop.dur_plural,
-    rep_plural: ST.prop.rep_plural,
-    cc_rep_plural: ST.prop.cc_rep_plural,
-    rep_suplente: ST.prop.rep_suplente,
-    cc_suplente: ST.prop.cc_suplente,
-    experiencia_ids: ST.expSel||[],
-    formatos: ST.verificacion?.formatos_a_generar||[],
-    f9_config: ST.f9Config,
-    docs_ingeniero: ST.docsIngenieroUrls||[]
+  // Recopilar datos de empresas completos
+  const db = ST.empresas;
+  const empresas_data = ST.prop.participantes.map(p=>{
+    const e = db.find(x=>x.id===p.id)||{};
+    return {...e, pct: p.pct};
+  });
+
+  // Recopilar experiencia seleccionada
+  const exp_sel = [];
+  for(const p of ST.prop.participantes){
+    const emp = db.find(x=>x.id===p.id);
+    if(emp?.experiencia){
+      for(const x of emp.experiencia){
+        if(ST.expSel?.includes(x.id)) exp_sel.push(x);
+      }
+    }
+  }
+
+  const meta = {
+    nombre_plural: ST.prop.nombre_plural, obj_plural: ST.prop.obj_plural,
+    dur_plural: ST.prop.dur_plural, rep_plural: ST.prop.rep_plural,
+    cc_rep_plural: ST.prop.cc_rep_plural, rep_suplente: ST.prop.rep_suplente,
+    cc_suplente: ST.prop.cc_suplente
   };
 
+  const formatos = ST.verificacion?.formatos_a_generar || [];
+  const nombres = {
+    'F1':'Carta de presentación','F2':'Acta consorcio/UT','F6':'Seguridad social',
+    'F7A':'Gerencia proyectos','F7B':'Maquinaria','F7C':'Plan calidad',
+    'F8':'Discapacidad','F9A':'Industria nacional','F9B':'Comp. nacional',
+    'F12':'Empresas mujeres','F13':'Mipyme','F14':'Ambiental y social',
+    'ANX4':'Pacto transparencia','F10':'Desempate','F11':'Datos personales'
+  };
+
+  // Mostrar barra de progreso
+  status.innerHTML = `
+    <div style="background:#f7fbff;border:1px solid #b5d4f4;border-radius:8px;padding:1rem;margin-bottom:.75rem">
+      <div style="font-size:13px;font-weight:500;margin-bottom:.75rem">Generando formatos con IA...</div>
+      <div id="prog-lista">
+        ${formatos.map(f=>`
+        <div id="prog-${f}" style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:#888">
+          <span id="icon-${f}" style="width:16px;text-align:center">○</span>
+          ${nombres[f]||f}
+        </div>`).join('')}
+      </div>
+    </div>`;
+
+  const archivosGenerados = [];
+  let errores = 0;
+
+  for(const fid of formatos){
+    const iconEl = document.getElementById(`icon-${fid}`);
+    const rowEl = document.getElementById(`prog-${fid}`);
+    if(iconEl){ iconEl.innerHTML = '<span class="spin"></span>'; rowEl.style.color='#1a1a2e'; }
+
+    try {
+      const body = {
+        formato_id: fid,
+        pliego: ST.pliego,
+        empresas_data: empresas_data,
+        tipo_proponente: ST.prop.tipo,
+        meta: meta,
+        f9_config: ST.f9Config,
+        experiencia_sel: exp_sel
+      };
+      const r = await fetch('/api/generar-formato', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+      });
+      if(r.ok){
+        const blob = await r.blob();
+        const cd = r.headers.get('Content-Disposition')||'';
+        const match = cd.match(/filename="?([^"]+)"?/);
+        const fname = match?.[1] || `${fid}.docx`;
+        archivosGenerados.push({blob, nombre: fname, fid});
+        if(iconEl){ iconEl.textContent='✓'; rowEl.style.color='#3b6d11'; }
+      } else {
+        errores++;
+        if(iconEl){ iconEl.textContent='✗'; rowEl.style.color='#a32d2d'; }
+      }
+    } catch(e){
+      errores++;
+      if(iconEl){ iconEl.textContent='✗'; rowEl.style.color='#a32d2d'; }
+    }
+  }
+
+  // Descargar cada Word individualmente
+  if(archivosGenerados.length > 0){
+    for(const arch of archivosGenerados){
+      const url = URL.createObjectURL(arch.blob);
+      const a = document.createElement('a');
+      a.href=url; a.download=arch.nombre; a.click();
+      await new Promise(r=>setTimeout(r,600));
+    }
+    status.innerHTML += `<div class="alerta-g">✓ ${archivosGenerados.length} formatos descargados en tu carpeta de descargas.${errores>0?` (${errores} con error)`:''}
+      <br><button class="btn btn-sm" style="margin-top:6px" onclick="descargarDocs()">⬇ Descargar también los documentos soportes (ZIP)</button></div>`;
+  } else {
+    status.innerHTML += '<div class="alerta-r">Error generando los documentos. Intenta de nuevo.</div>';
+  }
+
+  btn.disabled=false;
+  btn.innerHTML='⬇ Regenerar formatos';
+}
+
+async function descargarDocs(){
+  const body = {
+    empresas: ST.prop.participantes,
+    experiencia_ids: ST.expSel||[],
+    numero_proceso: ST.pliego?.numero_proceso||'proceso',
+    docs_ingeniero: ST.docsIngenieroUrls||[]
+  };
   try {
-    const r = await fetch('/api/generar-formatos', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const r = await fetch('/api/descargar-docs-zip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(r.ok){
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href=url; a.download=`Propuesta_${ST.pliego.numero_proceso||'proceso'}.zip`; a.click();
-      status.innerHTML = '<div class="alerta-g">✓ Propuesta generada y descargada. Revisa tu carpeta de descargas.</div>';
-    } else {
-      status.innerHTML = '<div class="alerta-r">Error generando los documentos. Intenta de nuevo.</div>';
+      a.href=url; a.download=`Documentos_${ST.pliego?.numero_proceso||'proceso'}.zip`; a.click();
     }
-  } catch(e){
-    status.innerHTML = '<div class="alerta-r">Error de conexión.</div>';
-  }
-  btn.disabled=false;
-  btn.innerHTML='⬇ Generar y descargar propuesta completa (ZIP)';
+  } catch(e){ alert('Error descargando documentos'); }
 }
 
 cargarEmpresas().then(()=>renderEmpresas());
