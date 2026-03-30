@@ -331,7 +331,7 @@ function formEmpresa(id){
             ${['cedula_contador','tp_contador','cert_jcc_contador'].map(t=>`
             <div style="font-size:11px;color:#666;margin-bottom:3px">${t==='cedula_contador'?'Cédula':t==='tp_contador'?'Tarjeta profesional':'Cert. vigencia Junta Contadores'}</div>
             <div class="upload-box" style="padding:6px;margin-bottom:4px">
-              <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'${t}',this,'${t}-status',false)">
+              <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'${t}',this,'${t}-status',true)">
               <p style="font-size:11px">Subir PDF</p>
             </div>
             <div id="${t}-status"></div>
@@ -347,7 +347,7 @@ function formEmpresa(id){
             ${['cedula_revisor','tp_revisor','cert_jcc_revisor'].map(t=>`
             <div style="font-size:11px;color:#666;margin-bottom:3px">${t==='cedula_revisor'?'Cédula':t==='tp_revisor'?'Tarjeta profesional':'Cert. vigencia Junta Contadores'}</div>
             <div class="upload-box" style="padding:6px;margin-bottom:4px">
-              <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'${t}',this,'${t}-status',false)">
+              <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'${t}',this,'${t}-status',true)">
               <p style="font-size:11px">Subir PDF</p>
             </div>
             <div id="${t}-status"></div>
@@ -363,7 +363,7 @@ function formEmpresa(id){
             ${['cedula_cont_ind','tp_cont_ind','cert_jcc_cont_ind'].map(t=>`
             <div style="font-size:11px;color:#666;margin-bottom:3px">${t.includes('cedula')?'Cédula':t.includes('tp')?'Tarjeta profesional':'Cert. vigencia Junta Contadores'}</div>
             <div class="upload-box" style="padding:6px;margin-bottom:4px">
-              <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'${t}',this,'${t}-status',false)">
+              <input type="file" accept=".pdf" onchange="subirDoc(${id||'null'},'${t}',this,'${t}-status',true)">
               <p style="font-size:11px">Subir PDF</p>
             </div>
             <div id="${t}-status"></div>
@@ -557,16 +557,81 @@ async function subirDoc(empId, tipo, input, statusId, extraer=false, expId=null)
       if(extraer && res.datos_extraidos && !res.datos_extraidos.error){
         const campos = Object.entries(res.datos_extraidos).filter(([k,v])=>v&&k!=='error').slice(0,4);
         if(campos.length) msg += `<br>Datos extraídos: ${campos.map(([k,v])=>`${k}: ${v}`).join(' · ')}`;
-        // Rellenar campos automáticamente
+        // Rellenar campos automáticamente según tipo de documento
         const d = res.datos_extraidos;
-        const setV = (id,v) => { const el=document.getElementById(id); if(el&&v) el.value=v; };
-        setV('f-rs', d.razon_social); setV('f-nit', d.nit); setV('f-tipo', d.tipo_empresa);
-        setV('f-dir', d.direccion); setV('f-ciudad', d.ciudad); setV('f-tel', d.telefono);
-        setV('f-email', d.email); setV('f-rep', d.rep_legal); setV('f-cc', d.cc_rep_legal);
-        setV('f-rev-n', d.revisor_nombre); setV('f-rev-cc', d.revisor_cc); setV('f-rev-tp', d.revisor_tp);
-        setV('f-liq', d.liquidez); setV('f-end', d.endeudamiento); setV('f-rent', d.rentabilidad);
-        setV('f-renta', d.rentabilidad_activo); setV('f-cap', d.capital_trabajo); setV('f-pat', d.patrimonio);
-        if(d.es_mipyme){ const cb=document.getElementById('f-mipyme'); if(cb) cb.checked=true; }
+        const setV = (id,v) => { const el=document.getElementById(id); if(el&&v&&String(v)!=='YYYY-MM-DD') el.value=v; };
+        const setChk = (id,v) => { const el=document.getElementById(id); if(el&&v) el.checked=true; };
+
+        // Cámara de comercio y RUP — llenan datos básicos + indicadores + revisor
+        if(['camara','rup'].includes(tipo)){
+          setV('f-rs', d.razon_social); setV('f-nit', d.nit); setV('f-tipo', d.tipo_empresa);
+          setV('f-dir', d.direccion); setV('f-ciudad', d.ciudad); setV('f-tel', d.telefono);
+          setV('f-email', d.email); setV('f-rep', d.rep_legal); setV('f-cc', d.cc_rep_legal);
+          setV('f-fcons', d.fecha_constitucion);
+          // Revisor fiscal (si aparece en la cámara)
+          setV('f-rev-n', d.revisor_nombre); setV('f-rev-cc', d.revisor_cc); setV('f-rev-tp', d.revisor_tp);
+          // Indicadores financieros (principalmente del RUP)
+          setV('f-liq', d.liquidez); setV('f-end', d.endeudamiento);
+          setV('f-rent', d.rentabilidad); setV('f-renta', d.rentabilidad_activo);
+          setV('f-cap', d.capital_trabajo); setV('f-pat', d.patrimonio);
+          if(d.es_mipyme === true) setChk('f-mipyme', true);
+        }
+        // RUT — datos básicos
+        else if(tipo === 'rut'){
+          setV('f-rs', d.razon_social); setV('f-nit', d.nit);
+          setV('f-dir', d.direccion); setV('f-ciudad', d.ciudad);
+          setV('f-email', d.email); setV('f-tel', d.telefono);
+          setV('f-fcons', d.fecha_constitucion);
+        }
+        // Estados financieros — indicadores + datos del contador que firma
+        else if(tipo === 'estados_financieros'){
+          setV('f-liq', d.liquidez); setV('f-end', d.endeudamiento);
+          setV('f-rent', d.rentabilidad); setV('f-renta', d.rentabilidad_activo);
+          setV('f-cap', d.capital_trabajo); setV('f-pat', d.patrimonio);
+          // Si el documento tiene datos del contador que lo firma
+          setV('f-cont-n', d.contador_nombre); setV('f-cont-cc', d.contador_cc);
+          setV('f-cont-tp', d.contador_tp);
+        }
+        // Cédula contador
+        else if(tipo === 'cedula_contador'){
+          setV('f-cont-n', d.nombre_completo); setV('f-cont-cc', d.numero_cedula);
+        }
+        // Tarjeta profesional contador
+        else if(tipo === 'tp_contador'){
+          setV('f-cont-n', d.nombre_completo); setV('f-cont-tp', d.numero_tp);
+        }
+        // Certificado JCC contador
+        else if(tipo === 'cert_jcc_contador'){
+          setV('f-cont-n', d.nombre_completo); setV('f-cont-tp', d.numero_tp);
+        }
+        // Cédula revisor fiscal
+        else if(tipo === 'cedula_revisor'){
+          setV('f-rev-n', d.nombre_completo); setV('f-rev-cc', d.numero_cedula);
+        }
+        // Tarjeta profesional revisor
+        else if(tipo === 'tp_revisor'){
+          setV('f-rev-n', d.nombre_completo); setV('f-rev-tp', d.numero_tp);
+        }
+        // Certificado JCC revisor
+        else if(tipo === 'cert_jcc_revisor'){
+          setV('f-rev-n', d.nombre_completo); setV('f-rev-tp', d.numero_tp);
+        }
+        // Cédula contador independiente
+        else if(tipo === 'cedula_cont_ind'){
+          setV('f-ci-n', d.nombre_completo); setV('f-ci-cc', d.numero_cedula);
+        }
+        // Tarjeta profesional contador independiente
+        else if(tipo === 'tp_cont_ind'){
+          setV('f-ci-n', d.nombre_completo); setV('f-ci-tp', d.numero_tp);
+        }
+        // Certificado JCC contador independiente
+        else if(tipo === 'cert_jcc_cont_ind'){
+          setV('f-ci-n', d.nombre_completo); setV('f-ci-tp', d.numero_tp);
+        }
+        // Tarjeta profesional / matrícula del rep legal (COPNIA)
+        else if(['matricula_rep','cert_copnia'].includes(tipo)){
+          setV('f-mat', d.numero_matricula);
+        }
       }
       if(statusEl) statusEl.innerHTML = `<div class="upload-status upload-ok">${msg}</div>`;
     } else {
